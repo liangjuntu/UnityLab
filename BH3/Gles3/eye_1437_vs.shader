@@ -1,0 +1,90 @@
+#version 300 es
+
+uniform 	vec4 _ProjectionParams;
+uniform 	vec4 hlslcc_mtx4x4unity_ObjectToWorld[4];
+uniform 	vec4 hlslcc_mtx4x4unity_MatrixVP[4];
+uniform 	mediump vec4 _MainTex_ST;
+uniform 	mediump vec3 _ColorToOffset;
+uniform 	float _UsingDitherAlpha;
+uniform 	float _DitherAlpha;
+in highp vec4 in_POSITION0;
+in mediump vec2 in_TEXCOORD0;
+out highp vec4 vs_COLOR0;
+out mediump vec2 vs_TEXCOORD0;
+out mediump vec3 vs_TEXCOORD1;
+out highp vec4 vs_TEXCOORD2;
+vec4 u_xlat0;
+vec4 u_xlat1;
+ivec3 u_xlati1;
+mediump vec2 u_xlat16_2;
+mediump vec3 u_xlat16_3;
+mediump float u_xlat16_6;
+mediump vec3 u_xlat16_7;
+int u_xlati8;
+bool u_xlatb8;
+mediump vec2 u_xlat16_10;
+mediump float u_xlat16_14;
+void main()
+{
+    u_xlat0 = in_POSITION0.yyyy * hlslcc_mtx4x4unity_ObjectToWorld[1];
+    u_xlat0 = hlslcc_mtx4x4unity_ObjectToWorld[0] * in_POSITION0.xxxx + u_xlat0;
+    u_xlat0 = hlslcc_mtx4x4unity_ObjectToWorld[2] * in_POSITION0.zzzz + u_xlat0;
+    u_xlat0 = u_xlat0 + hlslcc_mtx4x4unity_ObjectToWorld[3];
+    u_xlat1 = u_xlat0.yyyy * hlslcc_mtx4x4unity_MatrixVP[1];
+    u_xlat1 = hlslcc_mtx4x4unity_MatrixVP[0] * u_xlat0.xxxx + u_xlat1;
+    u_xlat1 = hlslcc_mtx4x4unity_MatrixVP[2] * u_xlat0.zzzz + u_xlat1;
+    u_xlat0 = hlslcc_mtx4x4unity_MatrixVP[3] * u_xlat0.wwww + u_xlat1;
+    gl_Position = u_xlat0;
+    vs_COLOR0 = vec4(0.0, 0.0, 0.0, 0.0);
+    vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
+    u_xlat16_2.x = (-_ColorToOffset.x) + _ColorToOffset.y;
+    u_xlat16_2.x = u_xlat16_2.x + 1.0;
+    u_xlat16_2.x = floor(u_xlat16_2.x);
+    u_xlat16_2.x = max(u_xlat16_2.x, 0.0);
+    u_xlati8 = int(u_xlat16_2.x);
+    u_xlat16_2.xy = (int(u_xlati8) != 0) ? _ColorToOffset.xy : _ColorToOffset.yx;
+    u_xlat16_10.x = (-u_xlat16_2.x) + _ColorToOffset.z;
+    u_xlat16_10.x = u_xlat16_10.x + 1.0;
+    u_xlat16_10.x = floor(u_xlat16_10.x);
+    u_xlat16_10.x = max(u_xlat16_10.x, 0.0);
+    u_xlati8 = int(u_xlat16_10.x);
+    u_xlat16_2.x = (u_xlati8 != 0) ? u_xlat16_2.x : _ColorToOffset.z;
+    u_xlat16_10.x = u_xlat16_2.y + (-_ColorToOffset.z);
+    u_xlat16_10.x = u_xlat16_10.x + 1.0;
+    u_xlat16_10.x = floor(u_xlat16_10.x);
+    u_xlat16_10.x = max(u_xlat16_10.x, 0.0);
+    u_xlati8 = int(u_xlat16_10.x);
+    u_xlat16_6 = (u_xlati8 != 0) ? u_xlat16_2.y : _ColorToOffset.z;
+    u_xlat16_2.x = (-u_xlat16_2.x) + u_xlat16_6;
+    u_xlat16_3.xyz = vec3(u_xlat16_6) + (-_ColorToOffset.yzx);
+    u_xlat16_3.xyz = u_xlat16_2.xxx * vec3(3.0, 3.0, 3.0) + u_xlat16_3.xyz;
+    u_xlat16_10.x = u_xlat16_2.x * 6.0;
+    u_xlat16_3.xyz = u_xlat16_3.xyz / u_xlat16_10.xxx;
+    u_xlat16_10.xy = u_xlat16_3.zx + vec2(0.333333343, 0.666666687);
+    u_xlat16_10.xy = vec2((-u_xlat16_3.y) + u_xlat16_10.x, (-u_xlat16_3.z) + u_xlat16_10.y);
+    u_xlat16_3.x = (-u_xlat16_3.x) + u_xlat16_3.y;
+    u_xlat16_7.xyz = (-vec3(u_xlat16_6)) + _ColorToOffset.xyz;
+    u_xlat16_7.xyz = abs(u_xlat16_7.xyz) + vec3(0.999000013, 0.999000013, 0.999000013);
+    u_xlat16_7.xyz = floor(u_xlat16_7.xyz);
+    u_xlati1.xyz = ivec3(u_xlat16_7.xyz);
+    u_xlat16_14 = (u_xlati1.z != 0) ? 0.0 : u_xlat16_10.y;
+    u_xlat16_10.x = (u_xlati1.y != 0) ? u_xlat16_14 : u_xlat16_10.x;
+    u_xlat16_3.x = (u_xlati1.x != 0) ? u_xlat16_10.x : u_xlat16_3.x;
+    u_xlat16_3.y = u_xlat16_2.x / u_xlat16_6;
+    vs_TEXCOORD1.z = u_xlat16_6;
+    u_xlat16_2.x = abs(u_xlat16_2.x) + 0.999000013;
+    u_xlat16_2.x = floor(u_xlat16_2.x);
+    u_xlati8 = int(u_xlat16_2.x);
+    vs_TEXCOORD1.xy = (int(u_xlati8) != 0) ? u_xlat16_3.xy : vec2(0.0, 0.0);
+    u_xlat0.y = u_xlat0.y * _ProjectionParams.x;
+    u_xlat1.xzw = u_xlat0.xwy * vec3(0.5, 0.5, 0.5);
+    u_xlat0.xy = u_xlat1.zz + u_xlat1.xw;
+#ifdef UNITY_ADRENO_ES3
+    u_xlatb8 = !!(vec4(0.0, 0.0, 0.0, 0.0)!=vec4(_UsingDitherAlpha));
+#else
+    u_xlatb8 = vec4(0.0, 0.0, 0.0, 0.0)!=vec4(_UsingDitherAlpha);
+#endif
+    vs_TEXCOORD2.xyw = mix(vec3(0.0, 0.0, 0.0), u_xlat0.xyw, vec3(bvec3(u_xlatb8)));
+    vs_TEXCOORD2.z = u_xlatb8 ? _DitherAlpha : float(0.0);
+    return;
+}

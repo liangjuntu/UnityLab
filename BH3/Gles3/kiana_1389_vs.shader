@@ -1,0 +1,63 @@
+#version 300 es
+
+uniform 	vec4 _ProjectionParams;
+uniform 	vec4 _WorldSpaceLightPos0;
+uniform 	vec4 hlslcc_mtx4x4unity_ObjectToWorld[4];
+uniform 	vec4 hlslcc_mtx4x4unity_WorldToObject[4];
+uniform 	vec4 hlslcc_mtx4x4unity_MatrixVP[4];
+uniform 	float _UsingDitherAlpha;
+uniform 	float _DitherAlpha;
+uniform 	float _UsingBloomMask;
+uniform 	vec4 _BloomMaskTex_ST;
+in highp vec4 in_POSITION0;
+in highp vec3 in_NORMAL0;
+in highp vec4 in_TEXCOORD0;
+in mediump vec4 in_COLOR0;
+out mediump vec4 vs_COLOR0;
+out mediump vec2 vs_TEXCOORD0;
+out mediump vec2 vs_TEXCOORD5;
+out mediump vec3 vs_TEXCOORD1;
+out mediump float vs_COLOR1;
+out highp vec3 vs_TEXCOORD2;
+out highp vec4 vs_TEXCOORD3;
+vec4 u_xlat0;
+vec4 u_xlat1;
+vec4 u_xlat2;
+mediump float u_xlat16_3;
+float u_xlat8;
+bvec2 u_xlatb9;
+void main()
+{
+    u_xlat0 = in_POSITION0.yyyy * hlslcc_mtx4x4unity_ObjectToWorld[1];
+    u_xlat0 = hlslcc_mtx4x4unity_ObjectToWorld[0] * in_POSITION0.xxxx + u_xlat0;
+    u_xlat0 = hlslcc_mtx4x4unity_ObjectToWorld[2] * in_POSITION0.zzzz + u_xlat0;
+    u_xlat1 = u_xlat0 + hlslcc_mtx4x4unity_ObjectToWorld[3];
+    u_xlat0 = hlslcc_mtx4x4unity_ObjectToWorld[3] * in_POSITION0.wwww + u_xlat0;
+    vs_TEXCOORD2.xyz = u_xlat0.xyz / u_xlat0.www;
+    u_xlat0 = u_xlat1.yyyy * hlslcc_mtx4x4unity_MatrixVP[1];
+    u_xlat0 = hlslcc_mtx4x4unity_MatrixVP[0] * u_xlat1.xxxx + u_xlat0;
+    u_xlat0 = hlslcc_mtx4x4unity_MatrixVP[2] * u_xlat1.zzzz + u_xlat0;
+    u_xlat0 = hlslcc_mtx4x4unity_MatrixVP[3] * u_xlat1.wwww + u_xlat0;
+    gl_Position = u_xlat0;
+    vs_COLOR0 = in_COLOR0;
+    vs_TEXCOORD0.xy = in_TEXCOORD0.xy;
+    u_xlat1.xy = in_TEXCOORD0.xy * _BloomMaskTex_ST.xy + _BloomMaskTex_ST.zw;
+    u_xlatb9.xy = notEqual(vec4(0.0, 0.0, 0.0, 0.0), vec4(_UsingDitherAlpha, _UsingBloomMask, _UsingDitherAlpha, _UsingBloomMask)).xy;
+    vs_TEXCOORD5.xy = (u_xlatb9.y) ? u_xlat1.xy : vec2(0.0, 0.0);
+    u_xlat2.x = dot(in_NORMAL0.xyz, hlslcc_mtx4x4unity_WorldToObject[0].xyz);
+    u_xlat2.y = dot(in_NORMAL0.xyz, hlslcc_mtx4x4unity_WorldToObject[1].xyz);
+    u_xlat2.z = dot(in_NORMAL0.xyz, hlslcc_mtx4x4unity_WorldToObject[2].xyz);
+    u_xlat8 = dot(u_xlat2.xyz, u_xlat2.xyz);
+    u_xlat8 = inversesqrt(u_xlat8);
+    u_xlat1.xyw = vec3(u_xlat8) * u_xlat2.xyz;
+    u_xlat16_3 = dot(u_xlat1.xyw, _WorldSpaceLightPos0.xyz);
+    vs_TEXCOORD1.xyz = u_xlat1.xyw;
+    u_xlat8 = u_xlat16_3 * 0.497500002 + 0.5;
+    vs_COLOR1 = u_xlat8;
+    u_xlat0.y = u_xlat0.y * _ProjectionParams.x;
+    u_xlat2.xzw = u_xlat0.xwy * vec3(0.5, 0.5, 0.5);
+    u_xlat0.xy = u_xlat2.zz + u_xlat2.xw;
+    vs_TEXCOORD3.xyw = mix(vec3(0.0, 0.0, 0.0), u_xlat0.xyw, vec3(u_xlatb9.xxx));
+    vs_TEXCOORD3.z = u_xlatb9.x ? _DitherAlpha : float(0.0);
+    return;
+}
