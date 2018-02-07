@@ -2,6 +2,7 @@
 {
 	Properties
 	{
+		_InvertUV("InvertUV", float) = 0 //这个自己加的，因为发现用profiler导出的模型的uv.y是反的
 		_MainTex ("MainTex", 2D) = "white" {}
 		_LightMapTex("LightMapTex", 2D) = "white" {}
 		_Color("Color", Vector) = (0.9313,0.9313,0.9313,0.95)
@@ -19,9 +20,9 @@
 		_UsingBloomMask("UsingBloomMask", float) = 0
 		_BloomMaskTex("BloomMaskTex", 2D) = "white" {}
 
-		_Emission("Emission", float) = 0
-		_EmissionColor("EmissionColor", color) = (1,1,1,1)
-		_EmissionBloomFactor("EmissionBloomFactor", float) = 0
+		_Emission("Emission", float) = 1
+		_EmissionColor("EmissionColor", color) = (255,255,255,255)
+		_EmissionBloomFactor("EmissionBloomFactor", float) = 1
 	}
 	SubShader
 	{
@@ -64,6 +65,7 @@
 
 			};
 
+			float _InvertUV;
 			sampler2D _MainTex;
 			float4 _MainTex_ST;
 			sampler2D _LightMapTex;
@@ -95,6 +97,10 @@
 				v2f o;
 				o.vertex = UnityObjectToClipPos(v.vertex);
 				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+				if(asint(_InvertUV) != 0)
+				{
+					o.uv.y = 1 - o.uv.y;
+				}
 				o.color0 = v.color;
 
 				int iUsingBloomMask = asint(_UsingBloomMask);

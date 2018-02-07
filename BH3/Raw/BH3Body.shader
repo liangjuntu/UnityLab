@@ -109,7 +109,7 @@
 				float r = i.color0.r;
 				//这里的r有问题;所以直接赋值为1
 				//r = 0.5;
-				r = 0.5;
+				//r = 0.5;
 				float g = lightMap.g;
 
 				float rgProduct = r * g;//用于diffuse颜色三层的选择
