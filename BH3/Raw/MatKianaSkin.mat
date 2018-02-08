@@ -6,8 +6,8 @@ Material:
   m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
-  m_Name: MatKianaBody
-  m_Shader: {fileID: 4800000, guid: f6caa6eb731a14f4da61d832d1de1453, type: 3}
+  m_Name: MatKianaSkin
+  m_Shader: {fileID: 4800000, guid: 7e17bb6ee4a5b274d98405e188f89d75, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -90,9 +90,11 @@ Material:
     - _UsingBloomMask: 1
     - _UsingDitherAlpha: 0
     - _ZWrite: 1
+    - _lightProbToggle: 1
     m_Colors:
     - _Color: {r: 0.93, g: 0.93, b: 0.93, a: 0.95}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
     - _FirstShadowMultColor: {r: 0.7294, g: 0.6, b: 0.6509, a: 1}
     - _LightSpecColor: {r: 1, g: 1, b: 1, a: 1}
     - _SecondShadowMultColor: {r: 0.6509, g: 0.4509, b: 0.549, a: 1}
+    - _lightProbColor: {r: 0.93, g: 0.93, b: 0.93, a: 1}

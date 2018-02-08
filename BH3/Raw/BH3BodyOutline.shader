@@ -1,4 +1,4 @@
-﻿Shader "BH3/BH3BodyTrans" //from 1389
+﻿Shader "BH3/BH3BodyOutline" //from 1389
 {
 	Properties
 	{
@@ -13,23 +13,35 @@
 		_Shiniess("Shiniess", float) = 10
 		_SpecMulti("SpecMulti", float) = 0.2
 		_LightSpecColor("LightSpecColor", Vector) = (1,1,1,1)
+		_BloomFactor("BloomFactor", float) = 1
 
 		_UsingDitherAlpha("UsingDitherAlpha", float) = 0
 		_DitherAlpha("DitherAlpha", float) = 0.5
+		_UsingBloomMask("UsingBloomMask", float) = 0
+		_BloomMaskTex("BloomMaskTex", 2D) = "white" {}
 
-		_Opaqueness("Opaqueness", float) = 0.5
+		_Emission("Emission", float) = 1
+		_EmissionColor("EmissionColor", color) = (255,255,255,255)
+		_EmissionBloomFactor("EmissionBloomFactor", float) = 1
+
+		_OutlineWidth("OutlineWidth", float) = 0.1
+		_OutlineColor("OutlineColor", color) = (255,255,255,255)
+		_MaxOutlineZOffset("MaxOutlineZOffset", float) = 0.2
+		_Scale("Scale", float) = 0.2
 	}
 	SubShader
 	{
-		Tags { "RenderType"="Opaque" "Queue" = "Transparent" }
+		Tags { "RenderType"="Opaque" "Queue"="Geometry" "LightMode"="ForwardBase" }
 		LOD 100
-		ZWrite Off
-		Blend SrcAlpha OneMinusSrcAlpha  
+		//ZWrite On
 
 		Pass
 		{
 			Name "ForwardBase"
 			Tags{ "LightMode" = "ForwardBase" }
+
+			Cull Back
+			ZTest LEqual
 
 			CGPROGRAM
 			#pragma vertex vert
@@ -53,9 +65,10 @@
 				float2 uv : TEXCOORD0;
 				float4 vertex : SV_POSITION;
 				float4 color0: COLOR;
-				float2 color1: COLOR1;
+				float halfLambert: COLOR1;
 				float3 worldNormal: TEXCOORD1;
 				float3 worldPos : TEXCOORD2;
+				float2 uvBloom: TEXCOORD5;
 				float4 texcoord3: TEXCOORD3;
 
 			};
@@ -75,11 +88,22 @@
 			float _Shiniess;
 			float _SpecMulti;
 			float4 _LightSpecColor;
+			float _BloomFactor;
 
 			float _UsingDitherAlpha;
 			float _DitherAlpha;
+			float _UsingBloomMask;
+			sampler2D _BloomMaskTex;
+			float4 _BloomMaskTex_ST;
 
-			float _Opaqueness;
+			float _Emission;
+			float4 _EmissionColor;
+			float _EmissionBloomFactor;
+
+			float _OutlineWidth;
+			float4 _OutlineColor;
+			float _MaxOutlineZOffset;
+			float _Scale;
 			
 			v2f vert (appdata v)
 			{
@@ -91,6 +115,10 @@
 					o.uv.y = 1 - o.uv.y;
 				}
 				o.color0 = v.color;
+				//o.color0 = float4(v.normal,1);
+
+				int iUsingBloomMask = asint(_UsingBloomMask);
+				o.uvBloom = (iUsingBloomMask != 0) ? TRANSFORM_TEX(v.uv, _BloomMaskTex) : float2(0,0);
 
 				float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
 				o.worldPos = worldPos;
@@ -103,7 +131,7 @@
 
 				float NDotL = dot(worldNormal, worldLight);
 				NDotL = NDotL * 0.5 + 0.5;
-				o.color1 = float2(NDotL,_Opaqueness); //Color1.x其实是halfLambert
+				o.halfLambert = NDotL; //Color1其实是halfLambert
 
 				//下面这段代码什么意思?
 				float4 u_xlat0 = v.vertex;
@@ -130,6 +158,14 @@
 				float4 albedo = tex2D(_MainTex, i.uv);
 				float3 mainColor = albedo.rgb;
 
+				float bloomMask = 0;
+				int iUsingBloomMask = asint(_UsingBloomMask);
+				if(iUsingBloomMask != 0 )
+				{
+					float bm = tex2D(_BloomMaskTex, i.uvBloom).x;
+					bloomMask = bm * albedo.a;
+				}
+
 				int iUsingDitherAlpha = asint(_UsingDitherAlpha);
 				//TODO 先不算DitherAlpha
 
@@ -147,9 +183,8 @@
 				float rgFix2 = rgProduct * 1.25 + (-0.125);
 				float rgProductFix = (rgProduct <= 0.5) ? rgFix2: rgFix1;
 
-				float halfLambert = i.color1.x;
-				float rg_NDotL = rgProduct + halfLambert;
-				float rgFix_NDotL = rgProductFix + halfLambert;
+				float rg_NDotL = rgProduct + i.halfLambert;
+				float rgFix_NDotL = rgProductFix + i.halfLambert;
 
 				float half_rg_NDotL = rg_NDotL * 0.5;
 				float half_rgFix_NDotL = rgFix_NDotL * 0.5;
@@ -181,14 +216,111 @@
 				float3 spec = _LightSpecColor * _SpecMulti * lightMap.r;
 				float3 specColor = (blinnSpec + lightMap.b) <= 1 ? float3(0,0,0): spec;
 
-				float3 finalColor = diffuseColor * _Color.rgb + specColor;
-				float finalAlpha = i.color1.y;
+				float3 finalColor = diffuseColor + specColor;
+				finalColor = finalColor * _Color.rgb;
+				float finalAlpha = _Color.a * _BloomFactor;
 
-				float4 target = float4(finalColor, finalAlpha);
-				//target.a = finalAlpha;
-				//target.rgb = finalAlpha;
+				float4 final = float4(finalColor, finalAlpha);
+
+
+				float3 emiColor = mainColor * _Emission;
+				emiColor = emiColor * _EmissionColor.rgb - finalColor.rgb;
+				float emiAlpha = _EmissionBloomFactor - finalAlpha;
+
+				float4 emi = float4(emiColor, emiAlpha);
+				
+				float4 target = bloomMask * emi + final;
 
 				return target;
+			}
+			ENDCG
+		}
+
+		Pass 
+		{
+			Name "Outline"
+			//Tags{ "LightMode" = "Outline" }
+
+			Cull Front
+			ZTest Less
+
+			CGPROGRAM
+			#pragma vertex vert
+			#pragma fragment frag
+			// make fog work
+			#pragma multi_compile_fwdbase
+			
+			#include "UnityCG.cginc"
+
+			struct appdata
+			{
+				float4 vertex : POSITION;
+				float4 color0: COLOR;
+				float3 normal: Normal;
+			};
+
+			struct v2f
+			{
+				float4 vertex : SV_POSITION;
+				float4 color0: COLOR;
+			};
+
+			float _InvertUV;
+			float4 _Color;
+			float _OutlineWidth;
+			float4 _OutlineColor;
+			float _MaxOutlineZOffset;
+			float _Scale;
+
+			v2f vert (appdata v)
+			{
+				v2f o;
+				//u_xlat1: view Normal
+				//u_xlat0: view Position
+				float3 u_xlat1 = mul(UNITY_MATRIX_IT_MV,v.normal);
+				float4 u_xlat0 = mul(UNITY_MATRIX_MV,v.vertex);
+				//float4 u_xlat0 = UnityObjectToViewPos(v.vertex);
+				u_xlat1.z = 0.00999999978;
+				float2 u_xlat16_3 = normalize(u_xlat1);
+
+				//这是View空间的根据深度压扁的图形
+				u_xlat0 = u_xlat0 / u_xlat0.w; 
+
+				//这是根据法线做的延伸
+				float3 u_xlat1_001 = normalize(u_xlat0.xyz) * _MaxOutlineZOffset * _Scale;
+				float u_xlat13 = v.color0.z + (-0.5);
+				u_xlat1_001 = u_xlat1_001 * u_xlat13 + u_xlat0.xyz;
+
+				//这个不知道是什么修正
+				float u_xlat0_x = (-u_xlat0.z) / unity_CameraProjection[1].y;
+				float u_xlat16_11 = u_xlat0_x / _Scale;
+				u_xlat16_11 = sqrt(u_xlat16_11);
+				u_xlat16_11 = u_xlat16_11 * _OutlineWidth * _Scale * v.color0.w;
+				//最终的xy位置
+				u_xlat0.xy = u_xlat16_3 * u_xlat16_11 + u_xlat1_001.xy;
+
+			
+
+				o.vertex = mul(UNITY_MATRIX_P, u_xlat0);
+
+				//加了这个才不会出现描边遮住模型
+				//??为什么崩坏3不需要加这个？
+				//float _DepthBias = 0.00012;
+				float _DepthBias = 0.01;
+				#ifdef UNITY_REVERSED_Z 
+					o.vertex.z -= _DepthBias;
+				#else
+					o.vertex.z += _DepthBias;
+				#endif	
+
+				o.color0 = float4(_OutlineColor.xyz,1);
+				return o;
+			}
+
+			fixed4 frag (v2f i) : SV_Target
+			{
+				float4 col = float4(i.color0.rgb * _Color.rgb, i.color0.a);
+				return col;
 			}
 			ENDCG
 		}

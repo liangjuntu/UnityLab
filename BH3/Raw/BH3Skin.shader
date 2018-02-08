@@ -1,4 +1,4 @@
-﻿Shader "BH3/BH3BodyTrans" //from 1389
+﻿Shader "BH3/BH3Skin" //from 750
 {
 	Properties
 	{
@@ -13,18 +13,19 @@
 		_Shiniess("Shiniess", float) = 10
 		_SpecMulti("SpecMulti", float) = 0.2
 		_LightSpecColor("LightSpecColor", Vector) = (1,1,1,1)
+		_BloomFactor("BloomFactor", float) = 1
 
 		_UsingDitherAlpha("UsingDitherAlpha", float) = 0
 		_DitherAlpha("DitherAlpha", float) = 0.5
 
-		_Opaqueness("Opaqueness", float) = 0.5
+		_lightProbToggle("lightProbToggle", float) = 0
+		_lightProbColor("lightProbColor", Vector) = (1,1,1,1)
 	}
 	SubShader
 	{
-		Tags { "RenderType"="Opaque" "Queue" = "Transparent" }
+		Tags { "RenderType"="Opaque" }
 		LOD 100
-		ZWrite Off
-		Blend SrcAlpha OneMinusSrcAlpha  
+		ZWrite On
 
 		Pass
 		{
@@ -53,9 +54,10 @@
 				float2 uv : TEXCOORD0;
 				float4 vertex : SV_POSITION;
 				float4 color0: COLOR;
-				float2 color1: COLOR1;
+				float halfLambert: COLOR1;
 				float3 worldNormal: TEXCOORD1;
 				float3 worldPos : TEXCOORD2;
+				//float2 uvBloom: TEXCOORD5;
 				float4 texcoord3: TEXCOORD3;
 
 			};
@@ -75,11 +77,13 @@
 			float _Shiniess;
 			float _SpecMulti;
 			float4 _LightSpecColor;
+			float _BloomFactor;
 
 			float _UsingDitherAlpha;
 			float _DitherAlpha;
 
-			float _Opaqueness;
+			float _lightProbToggle;
+			float4 _lightProbColor;
 			
 			v2f vert (appdata v)
 			{
@@ -103,7 +107,7 @@
 
 				float NDotL = dot(worldNormal, worldLight);
 				NDotL = NDotL * 0.5 + 0.5;
-				o.color1 = float2(NDotL,_Opaqueness); //Color1.x其实是halfLambert
+				o.halfLambert = NDotL; //Color1其实是halfLambert
 
 				//下面这段代码什么意思?
 				float4 u_xlat0 = v.vertex;
@@ -130,10 +134,10 @@
 				float4 albedo = tex2D(_MainTex, i.uv);
 				float3 mainColor = albedo.rgb;
 
+
 				int iUsingDitherAlpha = asint(_UsingDitherAlpha);
 				//TODO 先不算DitherAlpha
 
-				
 
 				float r = i.color0.r;
 				//这里的r有问题;所以直接赋值为1
@@ -147,9 +151,8 @@
 				float rgFix2 = rgProduct * 1.25 + (-0.125);
 				float rgProductFix = (rgProduct <= 0.5) ? rgFix2: rgFix1;
 
-				float halfLambert = i.color1.x;
-				float rg_NDotL = rgProduct + halfLambert;
-				float rgFix_NDotL = rgProductFix + halfLambert;
+				float rg_NDotL = rgProduct + i.halfLambert;
+				float rgFix_NDotL = rgProductFix + i.halfLambert;
 
 				float half_rg_NDotL = rg_NDotL * 0.5;
 				float half_rgFix_NDotL = rgFix_NDotL * 0.5;
@@ -181,12 +184,18 @@
 				float3 spec = _LightSpecColor * _SpecMulti * lightMap.r;
 				float3 specColor = (blinnSpec + lightMap.b) <= 1 ? float3(0,0,0): spec;
 
-				float3 finalColor = diffuseColor * _Color.rgb + specColor;
-				float finalAlpha = i.color1.y;
+				float3 finalColor = diffuseColor + specColor;
+				finalColor = finalColor * _Color.rgb;
+				float finalAlpha = _BloomFactor;
 
+				//下面是调整皮肤颜色的
+				bool u_xlatb0 = (0.5 < _lightProbToggle);
+				
+				float3 lightProb = u_xlatb0 ? _lightProbColor.rgb : float3(1.0, 1.0, 1.0);
+				finalColor = finalColor * lightProb;
+				
 				float4 target = float4(finalColor, finalAlpha);
-				//target.a = finalAlpha;
-				//target.rgb = finalAlpha;
+				
 
 				return target;
 			}

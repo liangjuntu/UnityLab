@@ -102,6 +102,7 @@
 					o.uv.y = 1 - o.uv.y;
 				}
 				o.color0 = v.color;
+				//o.color0 = float4(v.normal,1);
 
 				int iUsingBloomMask = asint(_UsingBloomMask);
 				o.uvBloom = (iUsingBloomMask != 0) ? TRANSFORM_TEX(v.uv, _BloomMaskTex) : float2(0,0);
@@ -220,6 +221,8 @@
 				//target.rgb = float3(_EmissionBloomFactor,_EmissionBloomFactor,_EmissionBloomFactor);
 
 				//target.rgb = float3(target.a, target.a, target.a);
+				//target.rgb = float3(i.color0.r,i.color0.r,i.color0.r);
+				//target.rgb = i.color0.rgb;
 
 				return target;
 			}
