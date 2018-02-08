@@ -1,8 +1,8 @@
-﻿Shader "BH3/BH3Body_Yae" //from 1389
+﻿Shader "BH3/BH3Body_Yae" //from 762
 {
 	Properties
 	{
-		_InvertUV("InvertUV", float) = 0
+		_InvertUV("InvertUV", float) = 0 //这个自己加的，因为发现用profiler导出的模型的uv.y是反的
 		_MainTex ("MainTex", 2D) = "white" {}
 		_LightMapTex("LightMapTex", 2D) = "white" {}
 		_Color("Color", Vector) = (0.9313,0.9313,0.9313,0.95)
@@ -17,12 +17,9 @@
 
 		_UsingDitherAlpha("UsingDitherAlpha", float) = 0
 		_DitherAlpha("DitherAlpha", float) = 0.5
-		_UsingBloomMask("UsingBloomMask", float) = 0
-		_BloomMaskTex("BloomMaskTex", 2D) = "white" {}
 
-		_Emission("Emission", float) = 1
-		_EmissionColor("EmissionColor", color) = (255,255,255,255)
-		_EmissionBloomFactor("EmissionBloomFactor", float) = 0
+		_lightProbToggle("lightProbToggle", float) = 0
+		_lightProbColor("lightProbColor", Vector) = (1,1,1,1)
 	}
 	SubShader
 	{
@@ -60,7 +57,7 @@
 				float halfLambert: COLOR1;
 				float3 worldNormal: TEXCOORD1;
 				float3 worldPos : TEXCOORD2;
-				float2 uvBloom: TEXCOORD5;
+				//float2 uvBloom: TEXCOORD5;
 				float4 texcoord3: TEXCOORD3;
 
 			};
@@ -68,7 +65,6 @@
 			float _InvertUV;
 			sampler2D _MainTex;
 			float4 _MainTex_ST;
-			half4 _MainTex_TexelSize;  
 			sampler2D _LightMapTex;
 			float4 _LightMapTex_ST;
 
@@ -85,36 +81,20 @@
 
 			float _UsingDitherAlpha;
 			float _DitherAlpha;
-			float _UsingBloomMask;
-			sampler2D _BloomMaskTex;
-			float4 _BloomMaskTex_ST;
 
-			float _Emission;
-			float4 _EmissionColor;
-			float _EmissionBloomFactor;
+			float _lightProbToggle;
+			float4 _lightProbColor;
 			
 			v2f vert (appdata v)
 			{
 				v2f o;
 				o.vertex = UnityObjectToClipPos(v.vertex);
 				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-				/*
-				#if UNITY_UV_STARTS_AT_TOP
-				if (_MainTex_TexelSize.y < 0)
-				{
-					//o.uv.w = 1 - o.uv.w;
-					o.uv.y = 1 - o.uv.y;
-				}
-				#endif
-				*/
 				if(asint(_InvertUV) != 0)
 				{
 					o.uv.y = 1 - o.uv.y;
 				}
 				o.color0 = v.color;
-
-				int iUsingBloomMask = asint(_UsingBloomMask);
-				o.uvBloom = (iUsingBloomMask != 0) ? TRANSFORM_TEX(v.uv, _BloomMaskTex) : float2(0,0);
 
 				float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
 				o.worldPos = worldPos;
@@ -154,22 +134,15 @@
 				float4 albedo = tex2D(_MainTex, i.uv);
 				float3 mainColor = albedo.rgb;
 
-				float bloomMask = albedo.a;
-				int iUsingBloomMask = asint(_UsingBloomMask);
-				if(iUsingBloomMask != 0 )
-				{
-					float bm = tex2D(_BloomMaskTex, i.uvBloom).x;
-					bloomMask = bm * albedo.a;
-				}
 
 				int iUsingDitherAlpha = asint(_UsingDitherAlpha);
 				//TODO 先不算DitherAlpha
 
-				
 
 				float r = i.color0.r;
 				//这里的r有问题;所以直接赋值为1
 				//r = 0.5;
+				r = 1;
 				float g = lightMap.g;
 
 				float rgProduct = r * g;//用于diffuse颜色三层的选择
@@ -213,26 +186,16 @@
 
 				float3 finalColor = diffuseColor + specColor;
 				finalColor = finalColor * _Color.rgb;
-				float finalAlpha = _Color.a * _BloomFactor;
+				float finalAlpha = _BloomFactor;
 
-				float4 final = float4(finalColor, finalAlpha);
-
-
-				float3 emiColor = mainColor * _Emission;
-				emiColor = emiColor * _EmissionColor.rgb - finalColor.rgb;
-				float emiAlpha = _EmissionBloomFactor - finalAlpha;
-
-				float4 emi = float4(emiColor, emiAlpha);
+				//下面是调整皮肤颜色的
+				bool u_xlatb0 = (0.5 < _lightProbToggle);
 				
-				float4 target = bloomMask * emi + final;
-				target = final;
-				//target.rgb = float3(emiAlpha,emiAlpha,emiAlpha);
-				//target.rgb = float3(_EmissionBloomFactor,_EmissionBloomFactor,_EmissionBloomFactor);
-
-				//target.rgb = float3(target.a, target.a, target.a);
-				//target.rgb = float3(i.color0.r,i.color0.r,i.color0.r);
-				//target.rgb = float3(rgProduct,rgProduct,rgProduct);
-				//target.rgb = float3(rgProduct,rgProduct,rgProduct);
+				float3 lightProb = u_xlatb0 ? _lightProbColor.rgb : float3(1.0, 1.0, 1.0);
+				finalColor = finalColor * lightProb;
+				
+				float4 target = float4(finalColor, finalAlpha);
+				
 
 				return target;
 			}
